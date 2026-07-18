@@ -101,13 +101,15 @@ contract DeliveryEscrow {
         address _token
     ) external payable returns (uint256) {
         require(_recipient != address(0), "Invalid recipient");
-        require(_rider != address(0), "Invalid rider");
         require(msg.sender != _recipient, "Sender cannot be recipient");
-        require(msg.sender != _rider, "Sender cannot be rider");
-        require(_recipient != _rider, "Recipient cannot be rider");
         require(_durationMinutes > 0, "Invalid duration");
         require(_confirmationCodeHash != bytes32(0), "Invalid code hash");
         require(supportedTokens[_token], "Unsupported token");
+
+        if (_rider != address(0)) {
+            require(msg.sender != _rider, "Sender cannot be rider");
+            require(_recipient != _rider, "Recipient cannot be rider");
+        }
 
         uint256 jobId = jobCounter++;
         uint256 deadline = block.timestamp + (_durationMinutes * 1 minutes);
@@ -146,9 +148,15 @@ contract DeliveryEscrow {
 
     function acceptJob(uint256 _jobId) external {
         Job storage job = jobs[_jobId];
-        require(msg.sender == job.rider, "Only rider can accept");
         require(job.status == Status.Created, "Not in created status");
         require(block.timestamp < job.deadline, "Past deadline");
+
+        if (job.rider == address(0)) {
+            require(registeredRiders[msg.sender], "Not a registered rider");
+            job.rider = msg.sender;
+        } else {
+            require(msg.sender == job.rider, "Only designated rider can accept");
+        }
 
         job.status = Status.Accepted;
         emit JobAccepted(_jobId, msg.sender);
@@ -196,6 +204,21 @@ contract DeliveryEscrow {
 
     function getJob(uint256 _jobId) external view returns (Job memory) {
         return jobs[_jobId];
+    }
+
+    function getOpenJobs() external view returns (uint256[] memory) {
+        uint256 count = 0;
+        for (uint256 i = 0; i < jobCounter; i++) {
+            if (jobs[i].status == Status.Created) count++;
+        }
+        uint256[] memory openJobs = new uint256[](count);
+        uint256 idx = 0;
+        for (uint256 i = 0; i < jobCounter; i++) {
+            if (jobs[i].status == Status.Created) {
+                openJobs[idx++] = i;
+            }
+        }
+        return openJobs;
     }
 
     function setJobCreationFee(uint256 _bps) external onlyOwner {

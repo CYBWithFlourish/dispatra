@@ -61,6 +61,26 @@ describe("DeliveryEscrow", function () {
       expect(job.amount).to.equal(expectedAmount);
     });
 
+    it("should create an open job with address(0) rider", async function () {
+      const hash = hre.ethers.keccak256(hre.ethers.toUtf8Bytes("delivery123"));
+      const tx = await contract.connect(sender).createJob(
+        recipient.address,
+        hre.ethers.ZeroAddress,
+        hash,
+        60,
+        NATIVE_MON,
+        { value: hre.ethers.parseEther("1") }
+      );
+      const receipt = await tx.wait();
+      const jobId = contract.interface.parseLog(
+        receipt.logs.find((l) => contract.interface.parseLog(l)?.name === "JobCreated")
+      ).args.jobId;
+
+      const job = await contract.getJob(jobId);
+      expect(job.rider).to.equal(hre.ethers.ZeroAddress);
+      expect(job.status).to.equal(0);
+    });
+
     it("should reject zero value", async function () {
       const hash = hre.ethers.keccak256(hre.ethers.toUtf8Bytes("code"));
       await expect(
@@ -74,20 +94,23 @@ describe("DeliveryEscrow", function () {
         contract.connect(sender).createJob(recipient.address, rider.address, hash, 60, "0x1234567890abcdef1234567890abcdef12345678", { value: hre.ethers.parseEther("1") })
       ).to.be.revertedWith("Unsupported token");
     });
-  });
 
-  describe("Role validation", function () {
-    it("should reject same-address roles", async function () {
+    it("should reject sender as recipient", async function () {
       const hash = hre.ethers.keccak256(hre.ethers.toUtf8Bytes("code"));
-
       await expect(
         contract.connect(sender).createJob(sender.address, rider.address, hash, 60, NATIVE_MON, { value: hre.ethers.parseEther("1") })
       ).to.be.revertedWith("Sender cannot be recipient");
+    });
 
+    it("should reject sender as designated rider", async function () {
+      const hash = hre.ethers.keccak256(hre.ethers.toUtf8Bytes("code"));
       await expect(
         contract.connect(sender).createJob(recipient.address, sender.address, hash, 60, NATIVE_MON, { value: hre.ethers.parseEther("1") })
       ).to.be.revertedWith("Sender cannot be rider");
+    });
 
+    it("should reject designated rider as recipient", async function () {
+      const hash = hre.ethers.keccak256(hre.ethers.toUtf8Bytes("code"));
       await expect(
         contract.connect(sender).createJob(recipient.address, recipient.address, hash, 60, NATIVE_MON, { value: hre.ethers.parseEther("1") })
       ).to.be.revertedWith("Recipient cannot be rider");
@@ -95,7 +118,7 @@ describe("DeliveryEscrow", function () {
   });
 
   describe("acceptJob", function () {
-    it("should allow rider to accept", async function () {
+    it("should allow designated rider to accept", async function () {
       const hash = hre.ethers.keccak256(hre.ethers.toUtf8Bytes("delivery123"));
       const tx = await contract.connect(sender).createJob(
         recipient.address, rider.address, hash, 60, NATIVE_MON, { value: hre.ethers.parseEther("1") }
@@ -106,6 +129,45 @@ describe("DeliveryEscrow", function () {
       await contract.connect(rider).acceptJob(jobId);
       const job = await contract.getJob(jobId);
       expect(job.status).to.equal(1);
+    });
+
+    it("should reject non-designated rider from accepting designated job", async function () {
+      const hash = hre.ethers.keccak256(hre.ethers.toUtf8Bytes("delivery123"));
+      const tx = await contract.connect(sender).createJob(
+        recipient.address, rider.address, hash, 60, NATIVE_MON, { value: hre.ethers.parseEther("1") }
+      );
+      const receipt = await tx.wait();
+      const jobId = contract.interface.parseLog(receipt.logs.find((l) => contract.interface.parseLog(l)?.name === "JobCreated")).args.jobId;
+
+      await expect(contract.connect(other).acceptJob(jobId)).to.be.revertedWith("Only designated rider can accept");
+    });
+
+    it("should allow registered rider to accept open job", async function () {
+      const fee = (120n * hre.ethers.parseEther("1")) / 10000n;
+      await contract.connect(rider).registerRider({ value: fee });
+
+      const hash = hre.ethers.keccak256(hre.ethers.toUtf8Bytes("delivery123"));
+      const tx = await contract.connect(sender).createJob(
+        recipient.address, hre.ethers.ZeroAddress, hash, 60, NATIVE_MON, { value: hre.ethers.parseEther("1") }
+      );
+      const receipt = await tx.wait();
+      const jobId = contract.interface.parseLog(receipt.logs.find((l) => contract.interface.parseLog(l)?.name === "JobCreated")).args.jobId;
+
+      await contract.connect(rider).acceptJob(jobId);
+      const job = await contract.getJob(jobId);
+      expect(job.rider).to.equal(rider.address);
+      expect(job.status).to.equal(1);
+    });
+
+    it("should reject unregistered rider from accepting open job", async function () {
+      const hash = hre.ethers.keccak256(hre.ethers.toUtf8Bytes("delivery123"));
+      const tx = await contract.connect(sender).createJob(
+        recipient.address, hre.ethers.ZeroAddress, hash, 60, NATIVE_MON, { value: hre.ethers.parseEther("1") }
+      );
+      const receipt = await tx.wait();
+      const jobId = contract.interface.parseLog(receipt.logs.find((l) => contract.interface.parseLog(l)?.name === "JobCreated")).args.jobId;
+
+      await expect(contract.connect(other).acceptJob(jobId)).to.be.revertedWith("Not a registered rider");
     });
   });
 
@@ -257,6 +319,27 @@ describe("DeliveryEscrow", function () {
     it("should allow ownership transfer", async function () {
       await contract.connect(deployer).transferOwnership(other.address);
       expect(await contract.owner()).to.equal(other.address);
+    });
+  });
+
+  describe("getOpenJobs", function () {
+    it("should return only open job IDs", async function () {
+      const hash = hre.ethers.keccak256(hre.ethers.toUtf8Bytes("delivery123"));
+
+      await contract.connect(sender).createJob(
+        recipient.address, rider.address, hash, 60, NATIVE_MON, { value: hre.ethers.parseEther("1") }
+      );
+      await contract.connect(sender).createJob(
+        recipient.address, hre.ethers.ZeroAddress, hash, 60, NATIVE_MON, { value: hre.ethers.parseEther("1") }
+      );
+
+      let openJobs = await contract.getOpenJobs();
+      expect(openJobs.length).to.equal(2);
+
+      await contract.connect(rider).acceptJob(0);
+      openJobs = await contract.getOpenJobs();
+      expect(openJobs.length).to.equal(1);
+      expect(openJobs[0]).to.equal(1);
     });
   });
 });
