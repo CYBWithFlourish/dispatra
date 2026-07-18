@@ -43,9 +43,14 @@ dispatra/
 │   ├── test/
 │   │   └── DeliveryEscrow.test.js
 │   ├── scripts/
-│   │   └── deploy.js
+│   │   ├── deploy.js             # Deploy + saves to deployed.{NETWORK}/
+│   │   ├── admin.js              # Contract lifecycle (fees, tokens, ownership)
+│   │   ├── explorer.js           # Explorer links (Monadscan + BlockVision)
+│   │   └── keypair.cjs           # Wallet generator (generate, balance, send)
+│   ├── deployed.TESTNET/         # Deployed contract data (gitignored)
+│   ├── deployed.MAINNET/         # Deployed contract data (gitignored)
 │   ├── hardhat.config.js
-│   ├── .env                      # KEYPAIR_*, MONAD_*_RPC_URL (gitignored)
+│   ├── .env                      # MONAD_NETWORK, KEYPAIR_*, MONAD_*_RPC_URL (gitignored)
 │   ├── .env.example
 │   ├── .gitignore
 │   └── package.json
@@ -94,7 +99,7 @@ dispatra/
 cd contracts
 npm install
 cp .env.example .env
-# Edit .env with your MONAD_*_RPC_URL or use the keypair script
+# Edit .env: set MONAD_NETWORK=TESTNET, add KEYPAIR_PRIVATE_KEY
 npm run keypair:generate
 npx hardhat compile
 npx hardhat test
@@ -106,13 +111,16 @@ current RPC URL and chain ID (verify against docs, don't assume) plus
 
 Deploy:
 ```bash
-npx hardhat run scripts/deploy.js --network monadTestnet
+npm run deploy:testnet
 ```
 
 Deploy to mainnet:
 ```bash
-npx hardhat run scripts/deploy.js --network monadMainnet
+npm run deploy:mainnet
 ```
+
+Deploy script outputs a JSON file to `deployed.TESTNET/` or `deployed.MAINNET/` with
+the contract address, tx hash, gas used, and explorer links (Monadscan + BlockVision).
 
 After deploy, copy the ABI from `contracts/artifacts/contracts/DeliveryEscrow.sol/DeliveryEscrow.json`
 into `frontend/src/lib/abi.json`, and paste the deployed address into
@@ -138,19 +146,28 @@ at build/SSR time.
 ## Build order
 
 1. `DeliveryEscrow.sol` - `createJob`, `acceptJob`, `confirmDelivery`, `cancelAndRefund`
-2. Tests - happy path + refund-on-timeout
-3. Deploy to Monad testnet, verify address works via a quick script call
-4. `WalletConnect` island (RainbowKit + MetaMask, get wallet address + balance showing)
-5. `sender.astro` flow - create job, show generated code, show job status
-6. `rider.astro` flow - list open jobs, accept, enter code, confirm
-7. Demo polish - two browser profiles/wallets side by side to show sender + rider live
+2. Fees + token support - `registerRider`, admin functions, ERC-20 (USDC) integration
+3. Tests - happy path + refund-on-timeout + fees + registration + admin
+4. Deploy to Monad testnet, verify address works via a quick script call
+5. `WalletConnect` island (RainbowKit + MetaMask, get wallet address + balance showing)
+6. `sender.astro` flow - create job, show generated code, show job status
+7. `rider.astro` flow - list open jobs, accept, enter code, confirm
+8. Demo polish - two browser profiles/wallets side by side to show sender + rider live
 
 ## Conventions for agents editing this repo
 
-- Contract functions: `createJob`, `acceptJob`, `confirmDelivery`, `cancelAndRefund` -
-  keep these exact names, frontend calls reference them directly.
+- Contract functions: `createJob`, `acceptJob`, `confirmDelivery`, `cancelAndRefund`,
+  `registerRider` - keep these exact names, frontend calls reference them directly.
+- Admin functions: `setJobCreationFee`, `setRiderRegistrationFee`, `setFeeRecipient`,
+  `addToken`, `removeToken`, `transferOwnership` - owner-only contract lifecycle.
 - Confirmation code: stored on-chain as `keccak256` hash, not plaintext, to keep it
   simple but not trivially readable from a block explorer.
+- Fees: 120 bps (1.2%) default on job creation and rider registration. No fee on
+  delivery confirmation. Fees go to `feeRecipient`, not the contract.
+- Tokens: native MON via `address(0)`, ERC-20 via `transferFrom`/`transfer`. Supported
+  tokens managed by `supportedTokens` mapping, owner can add/remove without redeploy.
+- Network config: `MONAD_NETWORK=TESTNET|MAINNET` in `.env` drives RPC URL selection
+  and deploy output directory (`deployed.TESTNET/` or `deployed.MAINNET/`).
 - No backend server - frontend talks to the contract directly via ethers.js. If a
   future iteration needs off-chain indexing (job history, etc.), that's a v2 concern,
   not part of this build.
