@@ -1,0 +1,37 @@
+# Dependencies
+node_modules/
+
+# Hardhat
+artifacts/
+cache/
+typechain-types/
+typechain/
+coverage/
+coverage.json
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# Wallet keypair
+.keypair
+
+# Logs
+logs
+*.log
+npm-debug.log*
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Test artifacts
+coverage/
+coverage.json

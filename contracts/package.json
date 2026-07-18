@@ -1,0 +1,25 @@
+{
+  "name": "dispatra-contracts",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "compile": "npx hardhat compile",
+    "test": "npx hardhat test",
+    "deploy": "npx hardhat run scripts/deploy.js",
+    "deploy:testnet": "MONAD_NETWORK=TESTNET npx hardhat run scripts/deploy.js --network monadTestnet",
+    "deploy:mainnet": "MONAD_NETWORK=MAINNET npx hardhat run scripts/deploy.js --network monadMainnet",
+    "admin": "npx hardhat run scripts/admin.js",
+    "keypair:generate": "node scripts/keypair.cjs generate",
+    "keypair:generate:force": "node scripts/keypair.cjs generate --override",
+    "keypair:mnemonic": "node scripts/keypair.cjs mnemonic",
+    "keypair:address": "node scripts/keypair.cjs address",
+    "keypair:privatekey": "node scripts/keypair.cjs privatekey",
+    "keypair:balance": "node scripts/keypair.cjs balance",
+    "keypair:send": "node scripts/keypair.cjs send"
+  },
+  "devDependencies": {
+    "@nomicfoundation/hardhat-toolbox": "^6.1.2",
+    "dotenv": "^17.4.2",
+    "hardhat": "^2.28.6"
+  }
+}
