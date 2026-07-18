@@ -1,0 +1,33 @@
+{
+  "contractName": "DeliveryEscrow",
+  "contractAddress": "0xD1Be20fde7d7EA7F89c5CF30D19e08CBb13b5394",
+  "network": "TESTNET",
+  "chainId": "10143",
+  "deployer": "0xC396caB081dAb1E2d1561Af4f33B25d035C0FD29",
+  "deployerBalance": "42.557136961462075798 MON",
+  "deployTxHash": "0x36f68cdd62c0b3acc92b1f00dc0281604a2fa132555d8b508e02cbfeaeef171a",
+  "deployBlock": "46061367",
+  "gasUsed": "3570900",
+  "explorerLinks": {
+    "monadscan": {
+      "name": "Monadscan",
+      "contract": "https://testnet.monadscan.com/address/0xD1Be20fde7d7EA7F89c5CF30D19e08CBb13b5394",
+      "tx": "https://testnet.monadscan.com/tx/0x36f68cdd62c0b3acc92b1f00dc0281604a2fa132555d8b508e02cbfeaeef171a"
+    },
+    "blockvision": {
+      "name": "MonadVision",
+      "contract": "https://testnet.monadvision.com/address/0xD1Be20fde7d7EA7F89c5CF30D19e08CBb13b5394",
+      "tx": "https://testnet.monadvision.com/tx/0x36f68cdd62c0b3acc92b1f00dc0281604a2fa132555d8b508e02cbfeaeef171a"
+    }
+  },
+  "config": {
+    "owner": "0xC396caB081dAb1E2d1561Af4f33B25d035C0FD29",
+    "feeRecipient": "0xC396caB081dAb1E2d1561Af4f33B25d035C0FD29",
+    "jobCreationFeeBps": "120",
+    "riderRegistrationFeeBps": "120",
+    "supportedTokens": [
+      "0x0000000000000000000000000000000000000000"
+    ]
+  },
+  "deployedAt": "2026-07-18T19:11:32.342Z"
+}
