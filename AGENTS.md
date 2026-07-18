@@ -28,8 +28,8 @@ testnet docs before deploy, these values have changed across testnet phases.
 - **Contracts:** Solidity + Hardhat
 - **Frontend:** Astro (static-first, islands for wallet-connected components)
 - **Chain client:** ethers.js v6
-- **Wallet connect:** MetaMask browser injection (`window.ethereum`) - no WalletConnect,
-  no RainbowKit, skip for time
+- **Wallet connect:** RainbowKit + MetaMask (window.ethereum) - RainbowKit for UI,
+  MetaMask as the primary wallet provider
 
 ---
 
@@ -45,21 +45,25 @@ dispatra/
 │   ├── scripts/
 │   │   └── deploy.js
 │   ├── hardhat.config.js
-│   ├── .env                      # PRIVATE_KEY, MONAD_TESTNET_RPC_URL (gitignored)
+│   ├── .env                      # KEYPAIR_*, MONAD_*_RPC_URL (gitignored)
 │   ├── .env.example
+│   ├── .gitignore
 │   └── package.json
 │
-├── frontend/                     # Astro project
+├── frontend/                     # Astro + React + RainbowKit project
 │   ├── src/
 │   │   ├── pages/
 │   │   │   ├── index.astro       # role picker: Sender / Rider
-│   │   │   ├── sender.astro      # create job, lock funds, view status, cancel/refund
-│   │   │   └── rider.astro       # browse open jobs, accept, enter code, confirm
+│   │   │   ├── sender.astro      # sender page wrapper
+│   │   │   └── rider.astro       # rider page wrapper
 │   │   ├── components/
-│   │   │   ├── WalletConnect.astro   # island: connect MetaMask, show address/balance
-│   │   │   ├── JobCreateForm.astro   # island: sender creates a job
-│   │   │   ├── JobList.astro         # island: rider sees open jobs
-│   │   │   └── ConfirmDelivery.astro # island: rider enters code
+│   │   │   ├── Providers.jsx         # wagmi + RainbowKit provider wrapper
+│   │   │   ├── WalletConnect.jsx     # RainbowKit ConnectButton island
+│   │   │   ├── JobCreateForm.jsx     # island: sender creates a job
+│   │   │   ├── JobList.jsx           # island: rider sees open jobs
+│   │   │   ├── ConfirmDelivery.jsx   # island: rider enters code
+│   │   │   ├── SenderPage.jsx        # sender page with providers
+│   │   │   └── RiderPage.jsx         # rider page with providers
 │   │   ├── lib/
 │   │   │   ├── contract.js       # ethers.js contract instance + ABI import
 │   │   │   ├── abi.json          # copied from contracts/artifacts after compile
@@ -68,9 +72,15 @@ dispatra/
 │   │       └── Base.astro
 │   ├── astro.config.mjs
 │   ├── package.json
-│   └── .env                      # PUBLIC_CONTRACT_ADDRESS, PUBLIC_RPC_URL
+│   ├── .env                      # PUBLIC_CONTRACT_ADDRESS, PUBLIC_RPC_URL, PUBLIC_CHAIN_ID
+│   ├── .env.example
+│   ├── .gitignore
+│   └── tsconfig.json
 │
+├── .agents/                      # Agent skills
+├── .gitignore
 ├── AGENTS.md                     # this file
+├── LICENSE                       # GPL-3.0
 └── README.md
 ```
 
@@ -81,17 +91,27 @@ dispatra/
 ### 1. Contracts
 
 ```bash
-mkdir contracts && cd contracts
-npx hardhat init          # choose "Create a JavaScript project"
-npm install --save-dev @nomicfoundation/hardhat-toolbox dotenv
+cd contracts
+npm install
+cp .env.example .env
+# Edit .env with your MONAD_*_RPC_URL or use the keypair script
+npm run keypair:generate
+npx hardhat compile
+npx hardhat test
 ```
 
-`hardhat.config.js` needs a `monadTestnet` network entry pointing at the current RPC
-URL and chain ID (verify against docs, don't assume) plus `accounts: [process.env.PRIVATE_KEY]`.
+`hardhat.config.js` has `monadTestnet` and `monadMainnet` network entries pointing at the
+current RPC URL and chain ID (verify against docs, don't assume) plus
+`accounts: [process.env.KEYPAIR_PRIVATE_KEY]`.
 
 Deploy:
 ```bash
 npx hardhat run scripts/deploy.js --network monadTestnet
+```
+
+Deploy to mainnet:
+```bash
+npx hardhat run scripts/deploy.js --network monadMainnet
 ```
 
 After deploy, copy the ABI from `contracts/artifacts/contracts/DeliveryEscrow.sol/DeliveryEscrow.json`
@@ -101,26 +121,26 @@ into `frontend/src/lib/abi.json`, and paste the deployed address into
 ### 2. Frontend
 
 ```bash
-npm create astro@latest frontend -- --template minimal --no-install
 cd frontend
 npm install
-npm install ethers
-npx astro add react   # only if an island needs React state; otherwise skip, use vanilla JS in <script>
+cp .env.example .env
+# Edit .env with the deployed contract address and RPC URL
 npm run dev
 ```
 
-Astro pages stay static by default - wallet-connected components (`WalletConnect`,
-`JobCreateForm`, `JobList`, `ConfirmDelivery`) need `client:load` directives since they
-depend on `window.ethereum`, which doesn't exist at build/SSR time.
+Frontend uses Astro + React + RainbowKit + wagmi. Wallet-connected components
+(`WalletConnect`, `JobCreateForm`, `JobList`, `ConfirmDelivery`) need `client:load`
+directives since they depend on RainbowKit / `window.ethereum`, which doesn't exist
+at build/SSR time.
 
 ---
 
-## Build order (matches the 6-hour plan)
+## Build order
 
 1. `DeliveryEscrow.sol` - `createJob`, `acceptJob`, `confirmDelivery`, `cancelAndRefund`
 2. Tests - happy path + refund-on-timeout
 3. Deploy to Monad testnet, verify address works via a quick script call
-4. Astro scaffold + `WalletConnect` island (get wallet address + balance showing)
+4. `WalletConnect` island (RainbowKit + MetaMask, get wallet address + balance showing)
 5. `sender.astro` flow - create job, show generated code, show job status
 6. `rider.astro` flow - list open jobs, accept, enter code, confirm
 7. Demo polish - two browser profiles/wallets side by side to show sender + rider live
