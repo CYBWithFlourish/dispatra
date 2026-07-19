@@ -66,7 +66,7 @@ export default function HomePage() {
       <section style={{ padding: '3rem 2rem', maxWidth: '900px', margin: '0 auto' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: '2rem', background: '#111', border: '1px solid #222', borderRadius: '12px', padding: '2rem' }}>
           {[
-            { value: '0%', label: 'Platform fee on deliveries', color: '#22c55e' },
+            { value: '1.2%', label: 'Platform fee (job creation)', color: '#22c55e' },
             { value: '<1s', label: 'Confirmation time', color: '#3b82f6' },
             { value: '2', label: 'Tokens accepted (MON, USDC)', color: '#f59e0b' },
           ].map((stat, i) => (
