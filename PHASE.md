@@ -3,7 +3,7 @@
 Dispatra is an on-chain delivery escrow platform on Monad. This document tracks the
 phased build from hackathon prototype to production SaaS.
 
-**Current phase:** Phase 2 + 3 (Encrypted Locations + Redis/Real-time)
+**Current phase:** Phase 4 (Auth + KYC)
 
 ---
 
@@ -44,6 +44,10 @@ phased build from hackathon prototype to production SaaS.
 | Method | Endpoint | Description |
 |--------|----------|-------------|
 | GET | `/health` | Health check + DB connection |
+| POST | `/auth/nonce` | Generate SIWE nonce for wallet |
+| POST | `/auth/login` | Verify SIWE signature → JWT cookie |
+| GET | `/auth/me` | Get current user from JWT |
+| POST | `/auth/logout` | Clear JWT cookie |
 | GET | `/jobs` | List jobs (query: status, rider, sender, limit, offset) |
 | GET | `/jobs/:id` | Get job by on-chain ID |
 | GET | `/jobs/:id/pin` | Get job PIN from chain |
@@ -52,9 +56,12 @@ phased build from hackathon prototype to production SaaS.
 | GET | `/riders` | List riders |
 | GET | `/riders/:address` | Get rider profile |
 | PUT | `/riders/:address` | Create or update rider profile |
-| GET | `/users/nonce/:address` | Get auth nonce for wallet |
 | GET | `/users/:address` | Get user profile |
 | PUT | `/users/:address` | Create or update user profile |
+| POST | `/kyc/create-applicant` | Create Sumsub KYC applicant |
+| GET | `/kyc/status/:address` | Check KYC verification status |
+| POST | `/kyc/webhook` | Sumsub webhook handler |
+| GET | `/kyc/token/:address` | Get Sumsub access token |
 
 ### Setup
 
@@ -218,16 +225,35 @@ REDIS_URL=redis://localhost:6379
 
 ## Phase 4: Auth + KYC (Sumsub)
 
-**Status:** Planned
+**Status:** Complete
 **Goal:** Full wallet-based auth with JWT. KYC via Sumsub for all participants.
+
+### What was built
+
+- **SIWE auth** (`POST /auth/nonce` → `POST /auth/login` → `GET /auth/me`)
+  - Client signs SIWE message with wallet
+  - Server verifies via `siwe` library + Redis nonce
+  - Returns JWT in httpOnly cookie (7-day expiry)
+  - JWT payload: `{ address, role }`
+- **JWT middleware** — `authMiddleware` extracts user from cookie/Authorization header
+  - `optionalAuth` for public routes that behave differently when authenticated
+- **Sumsub KYC** (`/kyc/*` routes)
+  - `POST /kyc/create-applicant` — creates Sumsub applicant with role-based level
+  - `GET /kyc/status/:address` — checks live status from Sumsub + DB
+  - `POST /kyc/webhook` — receives Sumsub review callbacks, updates DB
+  - `GET /kyc/token/:address` — returns Sumsub access token for client-side flow
+  - Senders: national ID verification
+  - Riders: NIN + driver's license verification
+- **Nonce storage** in Redis (5-minute TTL, replaces in-memory Map)
+- **Schema update:** `kyc_applicant_id` column added to `users` table
 
 ### Auth flow
 
 ```
 1. Client requests nonce from POST /auth/nonce
-2. Client signs nonce with wallet → sends to POST /auth/verify
-3. Server verifies signature → returns JWT
-4. JWT stored in httpOnly cookie → all API calls authenticated
+2. Client signs SIWE message with wallet → sends to POST /auth/login
+3. Server verifies signature → returns JWT (httpOnly cookie)
+4. All subsequent API calls authenticated via JWT
 5. Role detected from DB (sender/rider/admin)
 ```
 
@@ -254,9 +280,9 @@ api/src/routes/kyc.js
 
 ### Dependencies
 
-- `jsonwebtoken`
-- `siwe` (Sign-In with Ethereum)
-- `cookie-parser`
+- `jsonwebtoken` — JWT sign/verify
+- `siwe` — Sign-In with Ethereum (EIP-4361)
+- `cookie-parser` — httpOnly cookie support
 - Sumsub SDK (when ready)
 
 ---

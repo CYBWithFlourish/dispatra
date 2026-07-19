@@ -1,3 +1,7 @@
+# API
+api/node_modules/
+api/.env
+
 # Dependencies
 node_modules/
 
@@ -16,7 +20,7 @@ coverage.json
 
 # Wallet keypair
 .keypair
-
+DEMO.md
 # Logs
 logs
 *.log
