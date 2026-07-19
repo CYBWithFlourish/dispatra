@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "astro dev",
     "build": "astro build",
-    "preview": "astro preview"
+    "preview": "npx serve dist -l 4321 --no-clipboard"
   },
   "dependencies": {
     "@astrojs/react": "^4.0.0",
