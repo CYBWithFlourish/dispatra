@@ -2,76 +2,90 @@ const Redis = require('ioredis');
 
 let client;
 let subscriber;
+let redisAvailable = false;
 
 function getClient() {
   if (!client) {
-    client = new Redis(process.env.REDIS_URL || 'redis://localhost:6379', {
+    const url = process.env.REDIS_URL;
+    if (!url) {
+      console.log('[Redis] No REDIS_URL set — running without cache');
+      return null;
+    }
+    client = new Redis(url, {
       maxRetriesPerRequest: 3,
+      retryStrategy(times) {
+        if (times > 3) {
+          console.log('[Redis] Not available — running without cache');
+          return null;
+        }
+        return Math.min(times * 200, 2000);
+      },
       lazyConnect: true,
+      enableOfflineQueue: false,
     });
-    client.on('error', (err) => {
-      if (err.code !== 'ECONNREFUSED') console.error('Redis error:', err.message);
-    });
+    client.on('error', () => {});
+    client.on('connect', () => { redisAvailable = true; });
   }
   return client;
 }
 
 function getSubscriber() {
   if (!subscriber) {
-    subscriber = getClient().duplicate();
+    const c = getClient();
+    if (c) subscriber = c.duplicate();
   }
   return subscriber;
 }
 
 async function cacheGet(key) {
+  if (!redisAvailable) return null;
   try {
-    const redis = getClient();
-    const val = await redis.get(key);
+    const val = await getClient()?.get(key);
     return val ? JSON.parse(val) : null;
   } catch { return null; }
 }
 
 async function cacheSet(key, value, ttlSeconds = 30) {
+  if (!redisAvailable) return;
   try {
-    const redis = getClient();
-    await redis.set(key, JSON.stringify(value), 'EX', ttlSeconds);
+    await getClient()?.set(key, JSON.stringify(value), 'EX', ttlSeconds);
   } catch { }
 }
 
 async function cacheDel(key) {
+  if (!redisAvailable) return;
   try {
-    const redis = getClient();
-    await redis.del(key);
+    await getClient()?.del(key);
   } catch { }
 }
 
 async function publishEvent(channel, data) {
+  if (!redisAvailable) return;
   try {
-    const redis = getClient();
-    await redis.publish(channel, JSON.stringify(data));
+    await getClient()?.publish(channel, JSON.stringify(data));
   } catch { }
 }
 
 const NONCE_TTL = 300;
 
 async function setNonce(address, nonce) {
+  if (!redisAvailable) return;
   try {
-    const redis = getClient();
-    await redis.set(`nonce:${address.toLowerCase()}`, nonce, 'EX', NONCE_TTL);
+    await getClient()?.set(`nonce:${address.toLowerCase()}`, nonce, 'EX', NONCE_TTL);
   } catch { }
 }
 
 async function getNonce(address) {
+  if (!redisAvailable) return null;
   try {
-    const redis = getClient();
-    return await redis.get(`nonce:${address.toLowerCase()}`);
+    return await getClient()?.get(`nonce:${address.toLowerCase()}`);
   } catch { return null; }
 }
 
 async function deleteNonce(address) {
+  if (!redisAvailable) return;
   try {
-    const redis = getClient();
-    await redis.del(`nonce:${address.toLowerCase()}`);
+    await getClient()?.del(`nonce:${address.toLowerCase()}`);
   } catch { }
 }
 
