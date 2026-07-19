@@ -1,19 +1,30 @@
 const { Queue, Worker } = require('bullmq');
-const { getClient } = require('./redis');
 
-const connection = getClient();
+let syncQueue;
+let notifyQueue;
 
-const syncQueue = new Queue('sync-events', { connection: process.env.REDIS_URL });
-const notifyQueue = new Queue('notifications', { connection: process.env.REDIS_URL });
+function getQueues() {
+  if (!process.env.REDIS_URL) return null;
+  if (!syncQueue) {
+    const connection = process.env.REDIS_URL;
+    syncQueue = new Queue('sync-events', { connection });
+    notifyQueue = new Queue('notifications', { connection });
+  }
+  return { syncQueue, notifyQueue };
+}
 
 function setupWorkers() {
+  if (!process.env.REDIS_URL) return;
+
+  const connection = process.env.REDIS_URL;
+
   const syncWorker = new Worker('sync-events', async (job) => {
     console.log(`[BullMQ] Syncing job ${job.data.jobId}`);
-  }, { connection: process.env.REDIS_URL });
+  }, { connection });
 
   const notifyWorker = new Worker('notifications', async (job) => {
     console.log(`[BullMQ] Notifying riders for job ${job.data.jobId}`);
-  }, { connection: process.env.REDIS_URL });
+  }, { connection });
 
   syncWorker.on('failed', (job, err) => console.error(`[BullMQ] Sync failed:`, err.message));
   notifyWorker.on('failed', (job, err) => console.error(`[BullMQ] Notify failed:`, err.message));
@@ -21,4 +32,4 @@ function setupWorkers() {
   return { syncWorker, notifyWorker };
 }
 
-module.exports = { syncQueue, notifyQueue, setupWorkers };
+module.exports = { getQueues, setupWorkers };

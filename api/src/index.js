@@ -65,20 +65,29 @@ async function initDatabase() {
   }
 }
 
+async function connectRedis() {
+  const redis = getClient();
+  if (!redis) {
+    console.log('[Redis] No REDIS_URL — running without cache/queues');
+    return;
+  }
+  try {
+    await Promise.race([
+      redis.connect(),
+      new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 5000)),
+    ]);
+    console.log('[Redis] Connected');
+    setupWorkers();
+  } catch {
+    console.log('[Redis] Not available — running without cache/queues');
+  }
+}
+
 async function start() {
   await initDatabase();
+  await connectRedis();
 
   setupWebSocket(server);
-
-  try {
-    const redis = getClient();
-    redis.connect().then(() => {
-      setupWorkers();
-      console.log('[Redis] Connected');
-    }).catch(() => {
-      console.log('[Redis] Not available — running without cache');
-    });
-  } catch { }
 
   server.listen(PORT, HOST, () => {
     console.log(`Dispatra API running on http://${HOST}:${PORT}`);

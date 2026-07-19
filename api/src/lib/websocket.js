@@ -31,10 +31,12 @@ function setupWebSocket(server) {
   });
 
   const subscriber = getSubscriber();
-  subscriber.subscribe('job:created', 'job:accepted', 'job:completed', 'job:cancelled');
-  subscriber.on('message', (channel, data) => {
-    broadcast(channel, JSON.parse(data));
-  });
+  if (subscriber) {
+    subscriber.subscribe('job:created', 'job:accepted', 'job:completed', 'job:cancelled');
+    subscriber.on('message', (channel, data) => {
+      broadcast(channel, JSON.parse(data));
+    });
+  }
 
   return wss;
 }

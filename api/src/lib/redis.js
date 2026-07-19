@@ -7,32 +7,28 @@ let redisAvailable = false;
 function getClient() {
   if (!client) {
     const url = process.env.REDIS_URL;
-    if (!url) {
-      console.log('[Redis] No REDIS_URL set — running without cache');
-      return null;
-    }
+    if (!url) return null;
     client = new Redis(url, {
       maxRetriesPerRequest: 3,
       retryStrategy(times) {
-        if (times > 3) {
-          console.log('[Redis] Not available — running without cache');
-          return null;
-        }
+        if (times > 3) return null;
         return Math.min(times * 200, 2000);
       },
       lazyConnect: true,
-      enableOfflineQueue: false,
+      enableOfflineQueue: true,
+      maxLoadingTimeout: 5000,
     });
     client.on('error', () => {});
-    client.on('connect', () => { redisAvailable = true; });
+    client.on('ready', () => { redisAvailable = true; });
   }
   return client;
 }
 
 function getSubscriber() {
+  if (!redisAvailable) return null;
   if (!subscriber) {
     const c = getClient();
-    if (c) subscriber = c.duplicate();
+    if (c) subscriber = c.duplicate({ enableOfflineQueue: true });
   }
   return subscriber;
 }
