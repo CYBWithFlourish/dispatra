@@ -18,6 +18,8 @@ contract DeliveryEscrow {
         bytes32 confirmationCodeHash;
         uint256 deadline;
         address token;
+        bytes32 pickupLocationHash;
+        bytes32 deliveryLocationHash;
         Status status;
     }
 
@@ -34,6 +36,7 @@ contract DeliveryEscrow {
     uint256 public jobCounter;
     mapping(address => bool) public registeredRiders;
     mapping(address => bool) public supportedTokens;
+    mapping(uint256 => string) public jobConfirmationCodes;
     bool private locked;
 
     event JobCreated(
@@ -42,7 +45,10 @@ contract DeliveryEscrow {
         address indexed rider,
         uint256 amount,
         uint256 deadline,
-        address token
+        address token,
+        uint256 pin,
+        bytes32 pickupLocationHash,
+        bytes32 deliveryLocationHash
     );
     event JobAccepted(uint256 indexed jobId, address indexed rider);
     event DeliveryConfirmed(uint256 indexed jobId);
@@ -96,14 +102,15 @@ contract DeliveryEscrow {
     function createJob(
         address _recipient,
         address _rider,
-        bytes32 _confirmationCodeHash,
         uint256 _durationMinutes,
-        address _token
+        address _token,
+        uint256 _tokenAmount,
+        bytes32 _pickupLocationHash,
+        bytes32 _deliveryLocationHash
     ) external payable returns (uint256) {
         require(_recipient != address(0), "Invalid recipient");
         require(msg.sender != _recipient, "Sender cannot be recipient");
         require(_durationMinutes > 0, "Invalid duration");
-        require(_confirmationCodeHash != bytes32(0), "Invalid code hash");
         require(supportedTokens[_token], "Unsupported token");
 
         if (_rider != address(0)) {
@@ -113,6 +120,13 @@ contract DeliveryEscrow {
 
         uint256 jobId = jobCounter++;
         uint256 deadline = block.timestamp + (_durationMinutes * 1 minutes);
+
+        uint256 rawPin = uint256(keccak256(abi.encodePacked(
+            block.timestamp, block.prevrandao, msg.sender, jobId
+        ))) % 1000000;
+        string memory pinStr = zeroPad6(rawPin);
+        bytes32 pinHash = keccak256(abi.encodePacked(pinStr));
+        jobConfirmationCodes[jobId] = pinStr;
 
         uint256 amount;
         uint256 fee;
@@ -125,10 +139,13 @@ contract DeliveryEscrow {
                 payable(feeRecipient).transfer(fee);
             }
         } else {
-            fee = 0;
-            amount = msg.value;
-            require(amount > 0, "Must specify token amount");
-            IERC20(_token).transferFrom(msg.sender, address(this), amount);
+            require(_tokenAmount > 0, "Must specify token amount");
+            fee = (_tokenAmount * jobCreationFeeBps) / MAX_BPS;
+            amount = _tokenAmount - fee;
+            IERC20(_token).transferFrom(msg.sender, address(this), _tokenAmount);
+            if (fee > 0) {
+                IERC20(_token).transfer(feeRecipient, fee);
+            }
         }
 
         jobs[jobId] = Job({
@@ -136,16 +153,17 @@ contract DeliveryEscrow {
             recipient: _recipient,
             rider: _rider,
             amount: amount,
-            confirmationCodeHash: _confirmationCodeHash,
+            confirmationCodeHash: pinHash,
             deadline: deadline,
             token: _token,
+            pickupLocationHash: _pickupLocationHash,
+            deliveryLocationHash: _deliveryLocationHash,
             status: Status.Created
         });
 
-        emit JobCreated(jobId, msg.sender, _rider, amount, deadline, _token);
+        emit JobCreated(jobId, msg.sender, _rider, amount, deadline, _token, rawPin, _pickupLocationHash, _deliveryLocationHash);
         return jobId;
     }
-
     function acceptJob(uint256 _jobId) external {
         Job storage job = jobs[_jobId];
         require(job.status == Status.Created, "Not in created status");
@@ -256,5 +274,41 @@ contract DeliveryEscrow {
         require(_newOwner != address(0), "Invalid address");
         emit OwnerChanged(owner, _newOwner);
         owner = _newOwner;
+    }
+
+    function getJobPin(uint256 _jobId) external view returns (string memory) {
+        return jobConfirmationCodes[_jobId];
+    }
+
+    function toString(uint256 value) internal pure returns (string memory) {
+        if (value == 0) return "0";
+        uint256 temp = value;
+        uint256 digits;
+        while (temp != 0) {
+            digits++;
+            temp /= 10;
+        }
+        bytes memory buffer = new bytes(digits);
+        while (value != 0) {
+            digits -= 1;
+            buffer[digits] = bytes1(uint8(48 + uint256(value % 10)));
+            value /= 10;
+        }
+        return string(buffer);
+    }
+
+    function zeroPad6(uint256 value) internal pure returns (string memory) {
+        require(value < 1000000, "PIN out of range");
+        string memory str = toString(value);
+        bytes memory strBytes = bytes(str);
+        bytes memory padded = new bytes(6);
+        uint256 padLen = 6 - strBytes.length;
+        for (uint256 i = 0; i < padLen; i++) {
+            padded[i] = bytes1(uint8(48));
+        }
+        for (uint256 i = 0; i < strBytes.length; i++) {
+            padded[padLen + i] = strBytes[i];
+        }
+        return string(padded);
     }
 }

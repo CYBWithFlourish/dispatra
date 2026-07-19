@@ -1,23 +1,23 @@
 {
   "contractName": "DeliveryEscrow",
-  "contractAddress": "0x7E8A3714343cA24a34518f012391Daa3532571AD",
+  "contractAddress": "0x2C4E4EB9432F9736627615f6d8096D826b17c532",
   "network": "TESTNET",
   "chainId": "10143",
   "deployer": "0xC396caB081dAb1E2d1561Af4f33B25d035C0FD29",
-  "deployerBalance": "42.188313220194980098 MON",
-  "deployTxHash": "0x6beae1b37fc574b7bf8db2d445f4d8b7b5e341cb8c5c50e8be2cac0f4e358eff",
-  "deployBlock": "46065484",
-  "gasUsed": "3779627",
+  "deployerBalance": "41.725686875398759725 MON",
+  "deployTxHash": "0xbc121618903a742c0e51b74656979a110dfca3cb9d74762874ec1244feab5eba",
+  "deployBlock": "46083372",
+  "gasUsed": "1931587",
   "explorerLinks": {
     "monadscan": {
       "name": "Monadscan",
-      "contract": "https://testnet.monadscan.com/address/0x7E8A3714343cA24a34518f012391Daa3532571AD",
-      "tx": "https://testnet.monadscan.com/tx/0x6beae1b37fc574b7bf8db2d445f4d8b7b5e341cb8c5c50e8be2cac0f4e358eff"
+      "contract": "https://testnet.monadscan.com/address/0x2C4E4EB9432F9736627615f6d8096D826b17c532",
+      "tx": "https://testnet.monadscan.com/tx/0xbc121618903a742c0e51b74656979a110dfca3cb9d74762874ec1244feab5eba"
     },
     "blockvision": {
       "name": "MonadVision",
-      "contract": "https://testnet.monadvision.com/address/0x7E8A3714343cA24a34518f012391Daa3532571AD",
-      "tx": "https://testnet.monadvision.com/tx/0x6beae1b37fc574b7bf8db2d445f4d8b7b5e341cb8c5c50e8be2cac0f4e358eff"
+      "contract": "https://testnet.monadvision.com/address/0x2C4E4EB9432F9736627615f6d8096D826b17c532",
+      "tx": "https://testnet.monadvision.com/tx/0xbc121618903a742c0e51b74656979a110dfca3cb9d74762874ec1244feab5eba"
     }
   },
   "config": {
@@ -29,5 +29,5 @@
       "0x0000000000000000000000000000000000000000"
     ]
   },
-  "deployedAt": "2026-07-18T19:32:26.768Z"
+  "deployedAt": "2026-07-18T20:56:00.000Z"
 }

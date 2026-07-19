@@ -6,7 +6,13 @@ const MONAD_TESTNET_RPC_URL = process.env.MONAD_TESTNET_RPC_URL || "https://test
 const MONAD_MAINNET_RPC_URL = process.env.MONAD_MAINNET_RPC_URL || "https://rpc.monad.xyz";
 
 module.exports = {
-  solidity: "0.8.24",
+  solidity: {
+    version: "0.8.24",
+    settings: {
+      viaIR: true,
+      optimizer: { enabled: true, runs: 200 },
+    },
+  },
   networks: {
     hardhat: {},
     monadTestnet: {
