@@ -1,0 +1,26 @@
+{
+  "name": "dispatra-api",
+  "version": "3.0.0",
+  "private": true,
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "node --watch src/index.js",
+    "db:create": "node src/db/create.js",
+    "db:seed": "node src/db/seed.js",
+    "db:drop": "node src/db/drop.js"
+  },
+  "dependencies": {
+    "bullmq": "^5.80.8",
+    "cookie-parser": "^1.4.7",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "ethers": "^6.13.0",
+    "express": "^4.21.0",
+    "helmet": "^7.1.0",
+    "ioredis": "^5.11.1",
+    "jsonwebtoken": "^9.0.2",
+    "pg": "^8.12.0",
+    "siwe": "^3.0.1",
+    "ws": "^8.21.1"
+  }
+}
