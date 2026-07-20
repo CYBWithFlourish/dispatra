@@ -21,23 +21,14 @@ function verifyJWT(token) {
   }
 }
 
-async function verifySiwe(address, signature) {
+async function verifySiwe(parsedMessage, signature) {
   try {
-    const nonce = await require('../lib/redis').getNonce(address.toLowerCase());
+    const nonce = await require('../lib/redis').getNonce(parsedMessage.address);
     if (!nonce) return null;
+    if (parsedMessage.nonce !== nonce) return null;
 
-    const message = new SiweMessage({
-      domain: process.env.API_HOST || 'localhost:3001',
-      address,
-      statement: 'Sign in to Dispatra',
-      uri: `http://${process.env.API_HOST || 'localhost:3001'}`,
-      version: '1',
-      chainId: 10143,
-      nonce,
-    });
-
-    const { data: fields } = await message.verify({ signature });
-    await require('../lib/redis').deleteNonce(address.toLowerCase());
+    const { data: fields } = await parsedMessage.verify({ signature });
+    await require('../lib/redis').deleteNonce(fields.address);
     return fields.address.toLowerCase();
   } catch {
     return null;

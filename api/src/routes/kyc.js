@@ -110,27 +110,30 @@ router.post('/create-applicant', authMiddleware, async (req, res) => {
   }
 });
 
-router.get('/status/:address', authMiddleware, async (req, res) => {
+router.get('/status/:address', async (req, res) => {
   try {
     const address = req.params.address.toLowerCase();
 
-    if (req.walletAddress !== address) {
-      return res.status(403).json({ error: 'Can only check your own KYC status' });
-    }
-
     const result = await db.query(
-      'SELECT kyc_status, kyc_level, kyc_applicant_id FROM users WHERE LOWER(wallet_address) = LOWER($1)',
+      'SELECT wallet_verified, kyc_status, kyc_level, kyc_applicant_id FROM users WHERE LOWER(wallet_address) = LOWER($1)',
       [address]
     );
 
     if (result.rows.length === 0) {
-      return res.status(404).json({ error: 'User not found' });
+      return res.json({
+        walletVerified: false,
+        status: 'none',
+        level: 'none',
+        applicantId: null,
+        verified: false,
+      });
     }
 
     const user = result.rows[0];
 
     if (!SUMSUB_APP_TOKEN || !SUMSUB_SECRET_KEY || !user.kyc_applicant_id) {
       return res.json({
+        walletVerified: user.wallet_verified || false,
         status: user.kyc_status,
         level: user.kyc_level || 'none',
         applicantId: user.kyc_applicant_id,
@@ -156,6 +159,7 @@ router.get('/status/:address', authMiddleware, async (req, res) => {
       }
 
       return res.json({
+        walletVerified: user.wallet_verified || false,
         status: newStatus,
         level: user.kyc_level || 'none',
         applicantId: user.kyc_applicant_id,
@@ -165,6 +169,7 @@ router.get('/status/:address', authMiddleware, async (req, res) => {
     }
 
     res.json({
+      walletVerified: user.wallet_verified || false,
       status: user.kyc_status,
       applicantId: user.kyc_applicant_id,
       verified: user.kyc_status === 'verified',

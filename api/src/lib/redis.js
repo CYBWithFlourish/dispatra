@@ -63,25 +63,40 @@ async function publishEvent(channel, data) {
 }
 
 const NONCE_TTL = 300;
+const memoryNonces = new Map();
 
 async function setNonce(address, nonce) {
-  if (!redisAvailable) return;
+  const key = address.toLowerCase();
+  if (!redisAvailable) {
+    memoryNonces.set(key, { nonce, expires: Date.now() + NONCE_TTL * 1000 });
+    return;
+  }
   try {
-    await getClient()?.set(`nonce:${address.toLowerCase()}`, nonce, 'EX', NONCE_TTL);
+    await getClient()?.set(`nonce:${key}`, nonce, 'EX', NONCE_TTL);
   } catch { }
 }
 
 async function getNonce(address) {
-  if (!redisAvailable) return null;
+  const key = address.toLowerCase();
+  if (!redisAvailable) {
+    const entry = memoryNonces.get(key);
+    if (!entry || Date.now() > entry.expires) {
+      memoryNonces.delete(key);
+      return null;
+    }
+    return entry.nonce;
+  }
   try {
-    return await getClient()?.get(`nonce:${address.toLowerCase()}`);
+    return await getClient()?.get(`nonce:${key}`);
   } catch { return null; }
 }
 
 async function deleteNonce(address) {
+  const key = address.toLowerCase();
+  memoryNonces.delete(key);
   if (!redisAvailable) return;
   try {
-    await getClient()?.del(`nonce:${address.toLowerCase()}`);
+    await getClient()?.del(`nonce:${key}`);
   } catch { }
 }
 

@@ -1,4 +1,5 @@
 const express = require('express');
+const { SiweMessage } = require('siwe');
 const db = require('../lib/db');
 const { generateNonce, createJWT, verifySiwe, authMiddleware } = require('../middleware/auth');
 
@@ -13,7 +14,7 @@ router.post('/nonce', async (req, res) => {
     const redis = require('../lib/redis');
     await redis.setNonce(address.toLowerCase(), nonce);
 
-    res.json({ nonce, statement: 'Sign in to Dispatra' });
+    res.json({ nonce });
   } catch (err) {
     console.error('Auth nonce error:', err);
     res.status(500).json({ error: 'Failed to generate nonce' });
@@ -22,15 +23,18 @@ router.post('/nonce', async (req, res) => {
 
 router.post('/login', async (req, res) => {
   try {
-    const { address, signature } = req.body;
-    if (!address || !signature) {
-      return res.status(400).json({ error: 'Address and signature required' });
+    const { message, signature } = req.body;
+    if (!message || !signature) {
+      return res.status(400).json({ error: 'Message and signature required' });
     }
 
-    const verified = await verifySiwe(address, signature);
+    const parsed = new SiweMessage(message);
+    const verified = await verifySiwe(parsed, signature);
     if (!verified) {
       return res.status(401).json({ error: 'Invalid signature' });
     }
+
+    const address = parsed.address;
 
     const existing = await db.query(
       'SELECT role, kyc_status, wallet_verified FROM users WHERE LOWER(wallet_address) = LOWER($1)',
@@ -62,21 +66,22 @@ router.post('/login', async (req, res) => {
   }
 });
 
-router.post('/verify-wallet', authMiddleware, async (req, res) => {
+router.post('/verify-wallet', async (req, res) => {
   try {
-    const { address, signature } = req.body;
-    if (!address || !signature) {
-      return res.status(400).json({ error: 'Address and signature required' });
+    const { message, signature } = req.body;
+    if (!message || !signature) {
+      return res.status(400).json({ error: 'Message and signature required' });
     }
 
-    const verified = await verifySiwe(address, signature);
+    const parsed = new SiweMessage(message);
+    const verified = await verifySiwe(parsed, signature);
     if (!verified) {
       return res.status(401).json({ error: 'Invalid signature' });
     }
 
     await db.query(
       'UPDATE users SET wallet_verified = true WHERE LOWER(wallet_address) = LOWER($1)',
-      [address.toLowerCase()]
+      [parsed.address.toLowerCase()]
     );
 
     res.json({ walletVerified: true });

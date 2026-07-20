@@ -10,6 +10,8 @@ CREATE TABLE IF NOT EXISTS users (
   created_at        TIMESTAMP DEFAULT NOW()
 );
 
+ALTER TABLE users ADD COLUMN IF NOT EXISTS wallet_verified BOOLEAN DEFAULT false;
+
 CREATE TABLE IF NOT EXISTS riders (
   wallet_address   VARCHAR(42) PRIMARY KEY REFERENCES users(wallet_address),
   vehicle_type     VARCHAR(50),
