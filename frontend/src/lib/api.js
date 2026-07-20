@@ -18,8 +18,8 @@ async function request(path, options = {}) {
 export const api = {
   auth: {
     nonce: (address) => request('/auth/nonce', { method: 'POST', body: JSON.stringify({ address }) }),
-    login: (address, signature) => request('/auth/login', { method: 'POST', body: JSON.stringify({ address, signature }) }),
-    verifyWallet: (address, signature) => request('/auth/verify-wallet', { method: 'POST', body: JSON.stringify({ address, signature }) }),
+    login: (message, signature) => request('/auth/login', { method: 'POST', body: JSON.stringify({ message, signature }) }),
+    verifyWallet: (message, signature) => request('/auth/verify-wallet', { method: 'POST', body: JSON.stringify({ message, signature }) }),
     me: () => request('/auth/me'),
     logout: () => request('/auth/logout', { method: 'POST' }),
   },

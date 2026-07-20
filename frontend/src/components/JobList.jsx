@@ -3,7 +3,7 @@ import { useAccount, useWalletClient } from 'wagmi';
 import { ConnectButton } from '@rainbow-me/rainbowkit';
 import { ethers } from 'ethers';
 import { CONTRACT_ADDRESS, RPC_URL } from '../lib/constants.js';
-import CONTRACT_ABI from '../lib/abi.json';
+import { abi as CONTRACT_ABI } from '../lib/abi.json';
 import { api } from '../lib/api.js';
 import MapView from './MapView.jsx';
 import { MONAD_CENTER, MARKETPLACE_ZOOM, PIN_COLORS } from '../lib/mapConfig.js';

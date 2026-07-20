@@ -1,9 +1,9 @@
 import { useState, useCallback, useMemo, useEffect } from 'react';
-import { useAccount, useWalletClient } from 'wagmi';
+import { useAccount, useWalletClient, usePublicClient } from 'wagmi';
+import { encodeFunctionData, parseEther, keccak256, toUtf8Bytes, zeroPadValue } from 'viem';
 import { ConnectButton } from '@rainbow-me/rainbowkit';
-import { ethers } from 'ethers';
 import { CONTRACT_ADDRESS } from '../lib/constants.js';
-import CONTRACT_ABI from '../lib/abi.json';
+import { abi as CONTRACT_ABI } from '../lib/abi.json';
 import { api } from '../lib/api.js';
 import { useAuth } from './AuthProvider.jsx';
 import MapView from './MapView.jsx';
@@ -65,6 +65,7 @@ function getPriceStatus(amount, pricing) {
 export default function JobCreateForm() {
   const { address } = useAccount();
   const { data: walletClient } = useWalletClient();
+  const publicClient = usePublicClient();
   const { user, login, loggingIn } = useAuth();
   const [status, setStatus] = useState('');
   const [createdPin, setCreatedPin] = useState('');
@@ -213,7 +214,7 @@ export default function JobCreateForm() {
         <div style={{ background: '#111', border: '1px solid #222', borderRadius: '10px', padding: '1.5rem', textAlign: 'center' }}>
           <p style={{ color: '#999', fontSize: '0.9rem', marginBottom: '1rem' }}>Sign in with your wallet to continue</p>
           <button onClick={login} disabled={loggingIn} style={{ width: 'auto', padding: '0.6rem 1.5rem', display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }}>
-            {loggingIn ? <><Loader2 size={14} className="spin" /> Signing...</> : 'Sign In with Ethereum'}
+            {loggingIn ? <><Loader2 size={14} className="spin" /> Signing...</> : 'Sign In to Continue'}
           </button>
         </div>
       )}

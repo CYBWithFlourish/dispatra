@@ -3,7 +3,7 @@ import { useAccount, useWalletClient } from 'wagmi';
 import { ConnectButton } from '@rainbow-me/rainbowkit';
 import { ethers } from 'ethers';
 import { CONTRACT_ADDRESS } from '../lib/constants.js';
-import CONTRACT_ABI from '../lib/abi.json';
+import { abi as CONTRACT_ABI } from '../lib/abi.json';
 import { api } from '../lib/api.js';
 import { useAuth } from './AuthProvider.jsx';
 import { KeyRound, CircleCheck, AlertCircle, Wallet, Loader2 } from 'lucide-react';
@@ -65,7 +65,7 @@ export default function ConfirmDelivery() {
       <div style={{ background: '#111', border: '1px solid #222', borderRadius: '10px', padding: '1.5rem', textAlign: 'center' }}>
         <p style={{ color: '#999', fontSize: '0.85rem', marginBottom: '1rem' }}>Sign in to confirm delivery</p>
         <button onClick={login} disabled={loggingIn} style={{ width: 'auto', padding: '0.6rem 1.5rem', display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }}>
-          {loggingIn ? <><Loader2 size={14} className="spin" /> Signing...</> : 'Sign In with Ethereum'}
+          {loggingIn ? <><Loader2 size={14} className="spin" /> Signing...</> : 'Sign In to Continue'}
         </button>
       </div>
     );

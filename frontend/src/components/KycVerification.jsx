@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { useAccount, useSignMessage } from 'wagmi';
+import { useAccount, useSignMessage, useChainId } from 'wagmi';
+import { SiweMessage } from 'siwe';
 import { useAuth } from './AuthProvider.jsx';
 import { api } from '../lib/api.js';
 import { Shield, ShieldCheck, ShieldX, ShieldAlert, Loader2, ExternalLink, ArrowUp, Wallet } from 'lucide-react';
@@ -49,6 +50,7 @@ function loadSdk() {
 export default function KycVerification({ role = 'sender' }) {
   const { address } = useAccount();
   const { signMessageAsync } = useSignMessage();
+  const chainId = useChainId();
   const { user, login } = useAuth();
   const widgetRef = useRef(null);
   const pollRef = useRef(null);
@@ -114,8 +116,19 @@ export default function KycVerification({ role = 'sender' }) {
     setError(null);
     try {
       const nonceRes = await api.auth.nonce(address);
-      const signature = await signMessageAsync({ message: nonceRes.nonce });
-      await api.auth.verifyWallet(address, signature);
+      const origin = window.location.origin;
+      const siwe = new SiweMessage({
+        domain: window.location.host,
+        address,
+        statement: 'Sign in to Dispatra',
+        uri: origin,
+        version: '1',
+        chainId,
+        nonce: nonceRes.nonce,
+      });
+      const message = siwe.prepareMessage();
+      const signature = await signMessageAsync({ message });
+      await api.auth.verifyWallet(message, signature);
       setWalletVerified(true);
       login();
     } catch (err) {

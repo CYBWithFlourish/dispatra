@@ -1,4 +1,4 @@
-import CONTRACT_ABI from "./abi.json";
+import { abi as CONTRACT_ABI } from "./abi.json";
 import { CONTRACT_ADDRESS, RPC_URL, CHAIN_ID } from "./constants.js";
 
 import { ethers } from "ethers";

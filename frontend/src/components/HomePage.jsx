@@ -140,7 +140,7 @@ export default function HomePage() {
       <section style={{ padding: '4rem 2rem', textAlign: 'center', background: '#0a1628', marginTop: '4rem' }}>
         <h2 style={{ fontSize: 'clamp(1.5rem, 3vw, 2rem)', fontWeight: '700', marginBottom: '1rem' }}>Ready to deliver trustlessly?</h2>
         <p style={{ color: '#999', marginBottom: '2rem' }}>Connect your wallet and create your first on-chain delivery.</p>
-        <div style={{ display: 'flex', justifyContent: 'center' }}>
+        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
           <ConnectButton />
         </div>
       </section>
